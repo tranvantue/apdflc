@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conference Schedule</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+  /* ---------------- CÀI ĐẶT CƠ BẢN ---------------- */
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  
+  /* ---------------- MENU & HEADER TỪ TRANG CHỦ ---------------- */
+  .top-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 101; 
+  }
+
+  .menu-toggle, .search-icon { font-size: 24px; color: #333; background: none; border: none; cursor: pointer; padding: 5px; }
+  .logo-container { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #333; }
+  .logo-container img { height: 40px; }
+  .logo-text { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+  
+  .desktop-menu { display: none; }
+  .dropdown { position: relative; }
+  .dropdown-content { display: none; position: absolute; top: 100%; right: 0; background-color: #ffffff; min-width: 180px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-radius: 6px; border: 1px solid #e5e7eb; z-index: 101; padding: 10px 0; margin-top: 15px; }
+  .dropdown.active .dropdown-content { display: block; }
+  .dropdown-content a { color: #555; padding: 10px 20px; text-decoration: none; display: block; font-size: 14px; }
+  .dropdown-content a:hover { background-color: #f9f9f9; color: #3498db; }
+
+  @media (min-width: 768px) {
+    .menu-toggle { display: none; }
+    .desktop-menu { display: flex; align-items: center; gap: 20px; }
+    .desktop-menu > a, .dropbtn { text-decoration: none; color: #555; font-size: 15px; cursor: pointer; }
+    .desktop-menu > a:hover, .dropbtn:hover { color: #3498db; }
+    .logo-text { max-width: none; }
+  }
+  @media (min-width: 768px) and (max-width: 1100px) {
+    .hide-on-tablet { display: none !important; }
+    .show-on-tablet { display: block; }
+  }
+  @media (min-width: 1101px) {
+    .hide-on-tablet { display: inline-block; }
+    .show-on-tablet { display: none !important; }
+  }
+
+  .sidebar { position: fixed; top: 0; left: -300px; width: 280px; height: 100vh; background-color: #ffffff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: left 0.3s ease; z-index: 10000; display: flex; flex-direction: column; }
+  .sidebar.active { left: 0; }
+  .sidebar-header { padding: 15px; display: flex; justify-content: flex-start; }
+  .close-btn { background-color: #f6f7eb; color: #557143; border: none; width: 45px; height: 45px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+  .sidebar-menu { list-style: none; padding: 0; margin: 10px 0 0 0; }
+  .sidebar-menu li a { display: block; padding: 15px 25px; text-decoration: none; color: #555; font-size: 16px; transition: background 0.2s; }
+  .sidebar-menu li a:hover { background-color: #f9f9f9; color: #2c3e50; }
+  .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); opacity: 0; visibility: hidden; transition: all 0.3s ease; z-index: 9999; }
+  .overlay.active { opacity: 1; visibility: visible; }
+
+  /* ---------------- GIAO DIỆN LỊCH TRÌNH ---------------- */
+  .main-wrapper { padding: 30px 15px; flex: 1; }
+  
+  .sticky-announcement {
+    background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px 20px; border-radius: 6px;
+    margin: 0 auto 30px auto; max-width: 900px; display: flex; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-sizing: border-box; opacity: 1; transition: opacity 0.8s ease;
+    position: -webkit-sticky; position: sticky; top: 80px;
+    z-index: 99; 
+  }
+  .sticky-announcement i { color: #856404; font-size: 22px; margin-right: 15px; }
+  .announcement-text { color: #856404; font-size: 15px; font-weight: 500; line-height: 1.5; }
+
+  .schedule-container { max-width: 900px; margin: 0 auto; background: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); box-sizing: border-box; }
+  h1 { text-align: center; color: #1a252f; font-size: 25px; margin-bottom: 5px; text-transform: uppercase; }
+  .subtitle { text-align: center; color: #7f8c8d; margin-bottom: 30px; font-size: 16px; font-weight: 500; }
+  
+  .day-section { margin-bottom: 50px; padding: 15px; border-radius: 12px; transition: all 0.8s ease; }
+  .highlight-today { background-color: #f4f9ff; box-shadow: 0 0 20px rgba(52, 152, 219, 0.15); }
+  .day-header { background-color: #2c3e50; color: #ffffff; padding: 10px 25px; border-radius: 30px; font-size: 15px; font-weight: bold; display: inline-block; margin-bottom: 25px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); transition: all 0.5s ease; }
+  .highlight-today .day-header { background-color: #e74c3c; transform: scale(1.05); }
+
+  .timeline { border-left: 3px solid #e0e4e8; margin-left: 20px; padding-left: 30px; }
+  .event { position: relative; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #eee; }
+  .event:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .event::before { content: ''; position: absolute; left: -39px; top: 5px; width: 15px; height: 15px; background-color: #3498db; border-radius: 50%; border: 3px solid #ffffff; box-shadow: 0 0 0 2px #e0e4e8; }
+  
+  .time { font-size: 16px; font-weight: 700; color: #e67e22; margin-bottom: 5px; }
+  .event-desc { font-size: 15.5px; line-height: 1.6; color: #444; }
+  .event-desc strong { color: #2c3e50; }
+  
+  .notes { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px 20px; margin-top: 40px; border-radius: 4px; font-size: 15px; color: #856404; }
+
+  @media (max-width: 600px) {
+    .schedule-container { padding: 20px; }
+    h1 { font-size: 22px; }
+    .timeline { margin-left: 10px; padding-left: 20px; }
+    .event::before { left: -29px; width: 12px; height: 12px; }
+    .sticky-announcement { top: 60px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Lớp phủ tối màn hình khi mở Menu -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Menu Trượt (Sidebar - Dành cho Mobile) -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="close-btn" id="close-btn"><i class="fas fa-times"></i></button>
+    </div>
+    <ul class="sidebar-menu">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="schedule.html">Schedule</a></li>
+      <li><a href="liturgy.html">Liturgy</a></li>
+      <li><a href="documents.html">Documents</a></li>
+      <li><a href="info.html">General Info</a></li>
+      <li><a href="participants.html">Participants</a></li>
+      <li><a href="gallery.html">Gallery</a></li>
+    </ul>
+  </nav>
+
+  <!-- Header ngang -->
+  <header class="top-header">
+    <button class="menu-toggle" id="menu-btn"><i class="fas fa-bars"></i></button>
+    
+    <a href="index.html" class="logo-container">
+      <img src="https://via.placeholder.com/150x150.png?text=Logo" alt="Logo"> 
+      <span class="logo-text">APD Family Leadership Conferen...</span>
+    </a>
+
+    <!-- Menu ngang (Desktop & Tablet) -->
+    <div class="desktop-menu">
+      <a href="index.html">Home</a>
+      <a href="schedule.html">Schedule</a>
+      <a href="liturgy.html">Liturgy</a>
+      <a href="documents.html">Documents</a>
+      
+      <!-- CÁC MỤC BỊ ẨN KHI Ở MÀN HÌNH TABLET/IPAD -->
+      <a href="info.html" class="hide-on-tablet">General Info</a>
+      <a href="participants.html" class="hide-on-tablet">Participants</a>
+      <a href="gallery.html" class="hide-on-tablet">Gallery</a>
+
+      <!-- MENU MORE DÀNH CHO TABLET (Nhấp để xổ xuống) -->
+      <div class="dropdown show-on-tablet" id="more-dropdown-container">
+        <a href="#" class="dropbtn" id="more-btn">More <i class="fas fa-chevron-down"></i></a>
+        <div class="dropdown-content">
+          <a href="info.html">General Info</a>
+          <a href="participants.html">Participants</a>
+          <a href="gallery.html">Gallery</a>
+        </div>
+      </div>
+    </div>
+    <button class="search-icon"><i class="fas fa-search"></i></button>
+  </header>
+
+<div class="main-wrapper">
+  <!-- Khung Thông Báo Trôi Theo -->
+  <div class="sticky-announcement" id="announcement-wrapper">
+    <i class="fas fa-bullhorn"></i>
+    <div class="announcement-text" id="dynamic-schedule-announcement">
+      Loading latest announcement...
+    </div>
+  </div>
+
+  <div class="schedule-container">
+    <h1>Asia Pacific Dominican Family Leadership Conference</h1>
+    <div class="subtitle">Theme: “Strengthening Collaboration in Formation and Vocation Promotion: Towards Renewal of our Mission in Asia Pacific as Dominican Family”</div>
+
+    <!-- DAY 24 -->
+    <div class="day-section" id="day-24">
+      <div class="day-header">24 | SATURDAY, OCTOBER 2026</div>
+      <div class="timeline">
+        <div class="event">
+          <div class="time">AM to PM</div>
+          <div class="event-desc">
+            <strong>Room Check-in</strong><br>
+            Welcoming participants, delegates and servers to St. Martin Retreat House in the after
+          </div>
+        </div>
+        <div class="event">
+          <div class="time">18:30</div>
+          <div class="event-desc"><strong>Dinner</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">Evening</div>
+          <div class="event-desc"><strong>Vespers & compline in private</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAY 25 -->
+    <div class="day-section" id="day-25">
+      <div class="day-header">25 | SUNDAY, OCTOBER 2026</div>
+      <div class="timeline">
+        <div class="event">
+          <div class="time">05:00</div>
+          <div class="event-desc"><strong>Vietnamese Holy Mass and Lauds for the service team</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">07:00</div>
+          <div class="event-desc"><strong>Lauds</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">08:00</div>
+          <div class="event-desc"><strong>Breakfast</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">09:00</div>
+          <div class="event-desc"><strong>Opening Mass of the Dominican Family Conference of Asia–Pacific</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">10:30</div>
+          <div class="event-desc"><strong>The Welcome Performance of Vietnamese Dominican Sisters</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">11:45</div>
+          <div class="event-desc"><strong>Midday Prayer</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">12:00</div>
+          <div class="event-desc"><strong>Lunch</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">15:00</div>
+          <div class="event-desc"><strong>Plenary Session</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">16:00</div>
+          <div class="event-desc"><strong>Break</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">16:30</div>
+          <div class="event-desc"><strong>Group Discussion</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">18:00</div>
+          <div class="event-desc"><strong>Vespers</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">18:30</div>
+          <div class="event-desc"><strong>Dinner</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">19:30</div>
+          <div class="event-desc"><strong>Recreation</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">20:15</div>
+          <div class="event-desc"><strong>Compline</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAY 26 -->
+    <div class="day-section" id="day-26">
+      <div class="day-header">26 | MONDAY, OCTOBER 2026</div>
+      <div class="timeline">
+        <div class="event">
+          <div class="time">05:00</div>
+          <div class="event-desc"><strong>Vietnamese Holy Mass and Lauds for the service team</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">07:00</div>
+          <div class="event-desc"><strong>Holy Mass & Lauds</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">08:00</div>
+          <div class="event-desc"><strong>Breakfast</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">09:00</div>
+          <div class="event-desc"><strong>Plenary Session</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">10:30</div>
+          <div class="event-desc"><strong>Group Discussion</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">11:15</div>
+          <div class="event-desc"><strong>Midday Prayer</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">11:30</div>
+          <div class="event-desc"><strong>Lunch</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">14:30</div>
+          <div class="event-desc"><strong>Plenary Session</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">16:00</div>
+          <div class="event-desc"><strong>Break</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">16:30</div>
+          <div class="event-desc"><strong>Group Discussion</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">18:00</div>
+          <div class="event-desc"><strong>Vespers</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">18:30</div>
+          <div class="event-desc"><strong>Dinner</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">19:30</div>
+          <div class="event-desc"><strong>Recreation</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">20:15</div>
+          <div class="event-desc"><strong>Compline</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAY 27 -->
+    <div class="day-section" id="day-27">
+      <div class="day-header">27 | TUESDAY, OCTOBER 2026</div>
+      <div class="timeline">
+        <div class="event">
+          <div class="time">05:00</div>
+          <div class="event-desc"><strong>Vietnamese Holy Mass and Lauds for the service team</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">07:00</div>
+          <div class="event-desc"><strong>Holy Mass & Lauds</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">08:00</div>
+          <div class="event-desc"><strong>Breakfast</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">09:00</div>
+          <div class="event-desc"><strong>Plenary Session</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">10:30</div>
+          <div class="event-desc"><strong>Group Discussion</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">11:15</div>
+          <div class="event-desc"><strong>Midday Prayer</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">11:30</div>
+          <div class="event-desc"><strong>Lunch</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">13:00</div>
+          <div class="event-desc"><strong>Pilgrimage to Christ the King; Visit to the Dominican Sisters of Bà Rịa</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">18:00</div>
+          <div class="event-desc"><strong>Dinner</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">19:00</div>
+          <div class="event-desc"><strong>Return to St. Martin Retreat House</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAY 28 -->
+    <div class="day-section" id="day-28">
+      <div class="day-header">28 | WEDNESDAY, OCTOBER 2026</div>
+      <div class="timeline">
+        <div class="event">
+          <div class="time">05:00</div>
+          <div class="event-desc"><strong>Vietnamese Holy Mass and Lauds for the service team</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">07:00</div>
+          <div class="event-desc"><strong>Holy Mass & Lauds</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">08:00</div>
+          <div class="event-desc"><strong>Breakfast</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">09:00</div>
+          <div class="event-desc"><strong>Meeting in respective branches of the Dominican Family</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">11:15</div>
+          <div class="event-desc"><strong>Midday Prayer</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">11:30</div>
+          <div class="event-desc"><strong>Lunch</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">14:30</div>
+          <div class="event-desc"><strong>Meetings by Branch of the Dominican Family</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">18:00</div>
+          <div class="event-desc"><strong>Vespers</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">18:30</div>
+          <div class="event-desc"><strong>Dinner</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">19:30</div>
+          <div class="event-desc"><strong>Recreation</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">20:15</div>
+          <div class="event-desc"><strong>Compline</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAY 29 -->
+    <div class="day-section" id="day-29">
+      <div class="day-header">29 | THURSDAY, OCTOBER 2026</div>
+      <div class="timeline">
+        <div class="event">
+          <div class="time">05:00</div>
+          <div class="event-desc"><strong>Vietnamese Holy Mass and Lauds for the service team</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">07:00</div>
+          <div class="event-desc"><strong>Holy Mass & Lauds</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">08:00</div>
+          <div class="event-desc"><strong>Breakfast</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">09:00</div>
+          <div class="event-desc"><strong>Meeting in respective branches of the Dominican Family</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">10:30</div>
+          <div class="event-desc"><strong>Plenary Session – Concluding Session</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">11:30</div>
+          <div class="event-desc"><strong>Lunch</strong></div>
+        </div>
+        <div class="event">
+          <div class="time">Afternoon</div>
+          <div class="event-desc"><strong>Closing Conference & Farewell</strong></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="notes">
+      <strong>Notes:</strong> Participants are supposed to email their flight travel details to the email: <em>sociusvi@gmail.com</em> in the earliest time.
+    </div>
+
+  </div>
+</div>
+
+<!-- SCRIPT XỬ LÝ MENU VÀ API -->
+<script>
+  // 1. MENU RESPONSIVE VÀ DROPDOWN
+  const menuBtn = document.getElementById('menu-btn');
+  const closeBtn = document.getElementById('close-btn');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+
+  function toggleMenu() {
+    sidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
+  }
+
+  if(menuBtn) menuBtn.addEventListener('click', toggleMenu);
+  if(closeBtn) closeBtn.addEventListener('click', toggleMenu);
+  if(overlay) overlay.addEventListener('click', toggleMenu);
+
+  const moreBtn = document.getElementById('more-btn');
+  const moreDropdownContainer = document.getElementById('more-dropdown-container');
+
+  if (moreBtn && moreDropdownContainer) {
+    moreBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      moreDropdownContainer.classList.toggle('active');
+    });
+    document.addEventListener('click', function(e) {
+      if (!moreDropdownContainer.contains(e.target)) {
+        moreDropdownContainer.classList.remove('active');
+      }
+    });
+  }
+
+  // 2. API THÔNG BÁO TỪ GOOGLE SHEETS
+  const scheduleAnnouncementUrl = 'https://script.google.com/macros/s/AKfycbw_AXkC69ECBy1agz1Ak8nSo0a79cJxfrm82OJznsFPRDFEKUK0t6REQOhClgxDlxVrYg/exec';
+  
+  fetch(scheduleAnnouncementUrl)
+    .then(response => response.json())
+    .then(data => {
+      const announcementText = document.getElementById('dynamic-schedule-announcement');
+      const wrapper = document.getElementById('announcement-wrapper');
+      
+      if (!data.text || data.text.trim() === "Welcome to the Asia Pacific Dominican Family Leadership Conference 2026.") {
+         wrapper.style.display = 'none';
+      } else {
+         announcementText.innerHTML = data.text;
+         setTimeout(() => {
+           wrapper.style.opacity = '0';
+           setTimeout(() => {
+             wrapper.style.display = 'none';
+           }, 800);
+         }, 15000);
+      }
+    })
+    .catch(error => {
+      console.error('Lỗi tải thông báo', error);
+      document.getElementById('announcement-wrapper').style.display = 'none';
+    });
+
+  // 3. TỰ ĐỘNG CUỘN ĐẾN NGÀY HIỆN TẠI
+  function slowSmoothScroll(targetElement, duration) {
+    const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - 150; 
+    const startPosition = window.pageYOffset;
+    const distance = targetPosition - startPosition;
+    let startTime = null;
+
+    function animation(currentTime) {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const run = easeInOutCubic(timeElapsed, startPosition, distance, duration);
+      window.scrollTo(0, run);
+      if (timeElapsed < duration) { requestAnimationFrame(animation); }
+    }
+
+    function easeInOutCubic(t, b, c, d) {
+      t /= d / 2;
+      if (t < 1) return c / 2 * t * t * t + b;
+      t -= 2; return c / 2 * (t * t * t + 2) + b;
+    }
+    requestAnimationFrame(animation);
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const today = new Date();
+    // Thay đổi số này thành today.getDate() khi vào sự kiện thực tế
+    const currentDay = today.getDate(); 
+    
+    const targetId = 'day-' + currentDay;
+    const targetElement = document.getElementById(targetId);
+
+    if (targetElement) {
+      setTimeout(() => {
+        slowSmoothScroll(targetElement, 2500); 
+        setTimeout(() => {
+          targetElement.classList.add('highlight-today');
+          const dayHeader = targetElement.querySelector('.day-header');
+          if (dayHeader) { dayHeader.innerHTML += ' (TODAY)'; }
+        }, 2500); 
+      }, 1000); 
+    }
+  });
+</script>
+
+</body>
+</html>

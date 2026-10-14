@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>List of Participants</title>
+<!-- Thêm thư viện FontAwesome để hiển thị icon -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+  /* ---------------- CÀI ĐẶT CƠ BẢN ---------------- */
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100vh; /* Chiều cao chiếm toàn bộ màn hình */
+    overflow: hidden; /* Ngăn trang web sinh thêm thanh cuộn thứ hai */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f8f9fa;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* ---------------- MENU & HEADER TỪ TRANG CHỦ ---------------- */
+  .top-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0; /* Đảm bảo header không bị thu nhỏ */
+    z-index: 101; 
+  }
+
+  .menu-toggle, .search-icon { font-size: 24px; color: #333; background: none; border: none; cursor: pointer; padding: 5px; }
+  .logo-container { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #333; }
+  .logo-container img { height: 40px; }
+  .logo-text { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+  
+  .desktop-menu { display: none; }
+  .dropdown { position: relative; }
+  .dropdown-content { display: none; position: absolute; top: 100%; right: 0; background-color: #ffffff; min-width: 180px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-radius: 6px; border: 1px solid #e5e7eb; z-index: 101; padding: 10px 0; margin-top: 15px; }
+  .dropdown.active .dropdown-content { display: block; }
+  .dropdown-content a { color: #555; padding: 10px 20px; text-decoration: none; display: block; font-size: 14px; }
+  .dropdown-content a:hover { background-color: #f9f9f9; color: #3498db; }
+
+  @media (min-width: 768px) {
+    .menu-toggle { display: none; }
+    .desktop-menu { display: flex; align-items: center; gap: 20px; }
+    .desktop-menu > a, .dropbtn { text-decoration: none; color: #555; font-size: 15px; cursor: pointer; }
+    .desktop-menu > a:hover, .dropbtn:hover { color: #3498db; }
+    .logo-text { max-width: none; }
+  }
+  @media (min-width: 768px) and (max-width: 1100px) {
+    .hide-on-tablet { display: none !important; }
+    .show-on-tablet { display: block; }
+  }
+  @media (min-width: 1101px) {
+    .hide-on-tablet { display: inline-block; }
+    .show-on-tablet { display: none !important; }
+  }
+
+  .sidebar { position: fixed; top: 0; left: -300px; width: 280px; height: 100vh; background-color: #ffffff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: left 0.3s ease; z-index: 10000; display: flex; flex-direction: column; }
+  .sidebar.active { left: 0; }
+  .sidebar-header { padding: 15px; display: flex; justify-content: flex-start; }
+  .close-btn { background-color: #f6f7eb; color: #557143; border: none; width: 45px; height: 45px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+  .sidebar-menu { list-style: none; padding: 0; margin: 10px 0 0 0; }
+  .sidebar-menu li a { display: block; padding: 15px 25px; text-decoration: none; color: #555; font-size: 16px; transition: background 0.2s; }
+  .sidebar-menu li a:hover { background-color: #f9f9f9; color: #2c3e50; }
+  .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); opacity: 0; visibility: hidden; transition: all 0.3s ease; z-index: 9999; }
+  .overlay.active { opacity: 1; visibility: visible; }
+
+  /* ---------------- GIAO DIỆN KHUNG TÀI LIỆU (IFRAME) ---------------- */
+  .doc-container {
+    width: 100%;
+    flex: 1; /* Tự động lấp đầy phần chiều cao còn lại dưới header */
+    position: relative;
+  }
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+</style>
+</head>
+<body>
+
+  <!-- Lớp phủ tối màn hình khi mở Menu -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Menu Trượt (Sidebar - Dành cho Mobile) -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="close-btn" id="close-btn"><i class="fas fa-times"></i></button>
+    </div>
+    <ul class="sidebar-menu">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="schedule.html">Schedule</a></li>
+      <li><a href="liturgy.html">Liturgy</a></li>
+      <li><a href="documents.html">Documents</a></li>
+      <li><a href="info.html">General Info</a></li>
+      <li><a href="participants.html">Participants</a></li>
+      <li><a href="gallery.html">Gallery</a></li>
+    </ul>
+  </nav>
+
+  <!-- Header ngang -->
+  <header class="top-header">
+    <button class="menu-toggle" id="menu-btn"><i class="fas fa-bars"></i></button>
+    
+    <a href="index.html" class="logo-container">
+      <img src="https://via.placeholder.com/150x150.png?text=Logo" alt="Logo"> 
+      <span class="logo-text">APD Family Leadership Conferen...</span>
+    </a>
+
+    <!-- Menu ngang (Desktop & Tablet) -->
+    <div class="desktop-menu">
+      <a href="index.html">Home</a>
+      <a href="schedule.html">Schedule</a>
+      <a href="liturgy.html">Liturgy</a>
+      <a href="documents.html">Documents</a>
+      
+      <!-- CÁC MỤC BỊ ẨN KHI Ở MÀN HÌNH TABLET/IPAD -->
+      <a href="info.html" class="hide-on-tablet">General Info</a>
+      <a href="participants.html" class="hide-on-tablet">Participants</a>
+      <a href="gallery.html" class="hide-on-tablet">Gallery</a>
+
+      <!-- MENU MORE DÀNH CHO TABLET (Nhấp để xổ xuống) -->
+      <div class="dropdown show-on-tablet" id="more-dropdown-container">
+        <a href="#" class="dropbtn" id="more-btn">More <i class="fas fa-chevron-down"></i></a>
+        <div class="dropdown-content">
+          <a href="info.html">General Info</a>
+          <a href="participants.html">Participants</a>
+          <a href="gallery.html">Gallery</a>
+        </div>
+      </div>
+    </div>
+    <button class="search-icon"><i class="fas fa-search"></i></button>
+  </header>
+
+  <!-- Khung chứa nội dung Iframe -->
+  <div class="doc-container">
+    <!-- Đường link đã được chuyển sang chế độ Preview (chỉ xem, không có thanh công cụ) -->
+    <iframe src="https://docs.google.com/document/d/1auXAuPUuPq0Bh3nZ0Mqvk7acEDY6GoJ1kiCL5-IHbUk/preview"></iframe>
+  </div>
+
+  <!-- SCRIPT XỬ LÝ MENU -->
+  <script>
+    // MENU RESPONSIVE VÀ DROPDOWN
+    const menuBtn = document.getElementById('menu-btn');
+    const closeBtn = document.getElementById('close-btn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+
+    function toggleMenu() {
+      sidebar.classList.toggle('active');
+      overlay.classList.toggle('active');
+    }
+
+    if(menuBtn) menuBtn.addEventListener('click', toggleMenu);
+    if(closeBtn) closeBtn.addEventListener('click', toggleMenu);
+    if(overlay) overlay.addEventListener('click', toggleMenu);
+
+    const moreBtn = document.getElementById('more-btn');
+    const moreDropdownContainer = document.getElementById('more-dropdown-container');
+
+    if (moreBtn && moreDropdownContainer) {
+      moreBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        moreDropdownContainer.classList.toggle('active');
+      });
+      document.addEventListener('click', function(e) {
+        if (!moreDropdownContainer.contains(e.target)) {
+          moreDropdownContainer.classList.remove('active');
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>

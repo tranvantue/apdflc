@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home - APDFLC 2026</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+  /* Cài đặt cơ bản đồng bộ với toàn Site */
+  body { 
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+    background-color: transparent; 
+    margin: 0; 
+    padding: 0; 
+    color: #333; 
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ---------------- CÁC THÀNH PHẦN MENU & HEADER ---------------- */
+  
+  .top-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .menu-toggle, .search-icon {
+    font-size: 24px;
+    color: #333;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+  }
+
+  .logo-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: #333;
+  }
+  .logo-container img { height: 40px; }
+  .logo-text { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+
+  /* Giao diện Menu ngang cho Desktop & Tablet */
+  .desktop-menu { display: none; }
+  
+  /* Cấu hình Dropdown More */
+  .dropdown { position: relative; }
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: #ffffff;
+    min-width: 180px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    z-index: 101;
+    padding: 10px 0;
+    margin-top: 15px;
+  }
+  .dropdown.active .dropdown-content { display: block; }
+  
+  .dropdown-content a {
+    color: #555;
+    padding: 10px 20px;
+    text-decoration: none;
+    display: block;
+    font-size: 14px;
+  }
+  .dropdown-content a:hover { background-color: #f9f9f9; color: #3498db; }
+
+  /* ---------------- ĐIỀU HƯỚNG RESPONSIVE (MEDIA QUERIES) ---------------- */
+  
+  /* 1. Màn hình Tablet trở lên (>= 768px) */
+  @media (min-width: 768px) {
+    .menu-toggle { display: none; } /* Ẩn nút 3 gạch */
+    .desktop-menu { display: flex; align-items: center; gap: 20px; }
+    .desktop-menu > a, .dropbtn { 
+        text-decoration: none; 
+        color: #555; 
+        font-size: 15px; 
+        cursor: pointer;
+    }
+    .desktop-menu > a:hover, .dropbtn:hover { color: #3498db; }
+    .logo-text { max-width: none; }
+  }
+
+  /* 2. Màn hình Tablet / iPad (768px đến 1100px): Ẩn bớt link, hiện chữ More */
+  @media (min-width: 768px) and (max-width: 1100px) {
+    .hide-on-tablet { display: none !important; }
+    .show-on-tablet { display: block; }
+  }
+
+  /* 3. Màn hình Rộng PC/Laptop (> 1100px): Hiện toàn bộ, ẩn chữ More */
+  @media (min-width: 1101px) {
+    .hide-on-tablet { display: inline-block; }
+    .show-on-tablet { display: none !important; }
+  }
+
+
+  /* ---------------- SIDEBAR MENU DÀNH CHO ĐIỆN THOẠI ---------------- */
+  .sidebar { position: fixed; top: 0; left: -300px; width: 280px; height: 100vh; background-color: #ffffff; box-shadow: 2px 0 10px rgba(0,0,0,0.1); transition: left 0.3s ease; z-index: 1000; display: flex; flex-direction: column; }
+  .sidebar.active { left: 0; }
+  .sidebar-header { padding: 15px; display: flex; justify-content: flex-start; }
+  .close-btn { background-color: #f6f7eb; color: #557143; border: none; width: 45px; height: 45px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+  .sidebar-menu { list-style: none; padding: 0; margin: 10px 0 0 0; }
+  .sidebar-menu li a { display: block; padding: 15px 25px; text-decoration: none; color: #555; font-size: 16px; transition: background 0.2s; }
+  .sidebar-menu li a:hover { background-color: #f9f9f9; color: #2c3e50; }
+  
+  .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); opacity: 0; visibility: hidden; transition: all 0.3s ease; z-index: 999; }
+  .overlay.active { opacity: 1; visibility: visible; }
+
+  /* ---------------- CSS NỘI DUNG CHÍNH (GIỮ NGUYÊN) ---------------- */
+  .main-content { flex: 1; padding: 30px 15px 0 15px; }
+  .header-titles { text-align: center; margin-bottom: 30px; }
+  .title-main { color: #2c3e50; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+  .title-sub { color: #3498db; font-size: 15px; font-style: italic; font-weight: 500; }
+  .announcement-box { background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px 20px; border-radius: 6px; margin: 0 auto 40px auto; max-width: 800px; display: flex; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .announcement-box i { color: #856404; font-size: 22px; margin-right: 15px; }
+  .announcement-text { color: #856404; font-size: 15px; font-weight: 500; line-height: 1.5; }
+  .nav-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; max-width: 900px; margin: 0 auto; }
+  .nav-card { background: #ffffff; border-radius: 10px; padding: 25px 15px; text-align: center; text-decoration: none; color: #2c3e50; border: 1px solid #e5e7eb; box-shadow: 0 4px 10px rgba(0,0,0,0.02); transition: all 0.3s ease; border-top: 4px solid transparent; display: flex; flex-direction: column; align-items: center; }
+  .nav-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); border-top-color: #3498db; }
+  .nav-card i { font-size: 32px; color: #4b5563; margin-bottom: 15px; transition: color 0.3s; }
+  .nav-card:hover i { color: #3498db; }
+  .nav-card span { display: block; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .footer { background-color: #1a2f43; color: #ffffff; text-align: center; padding: 35px 20px; margin-top: 60px; width: 100%; box-sizing: border-box; }
+  .footer-title { font-size: 18px; margin-bottom: 8px; }
+  .footer-subtitle { font-size: 14.5px; }
+
+  @media (max-width: 600px) {
+    .nav-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+    .nav-card { padding: 20px 10px; }
+    .nav-card i { font-size: 26px; margin-bottom: 10px; }
+    .nav-card span { font-size: 12px; }
+    .title-main { font-size: 16px; }
+    .title-sub { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Lớp phủ tối màn hình khi mở Menu -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Menu Trượt (Sidebar - Dành cho Mobile) -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <button class="close-btn" id="close-btn"><i class="fas fa-times"></i></button>
+    </div>
+    <ul class="sidebar-menu">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="schedule.html">Schedule</a></li>
+      <li><a href="liturgy.html">Liturgy</a></li>
+      <li><a href="documents.html">Documents</a></li>
+      <li><a href="info.html">General Info</a></li>
+      <li><a href="participants.html">Participants</a></li>
+      <li><a href="gallery.html">Gallery</a></li>
+    </ul>
+  </nav>
+
+  <!-- Header ngang -->
+  <header class="top-header">
+    <button class="menu-toggle" id="menu-btn"><i class="fas fa-bars"></i></button>
+    
+    <a href="index.html" class="logo-container">
+      <img src="https://via.placeholder.com/150x150.png?text=Logo" alt="Logo"> 
+      <span class="logo-text">APD Family Leadership Conferen...</span>
+    </a>
+
+    <!-- Menu ngang (Desktop & Tablet) -->
+    <div class="desktop-menu">
+      <a href="index.html">Home</a>
+      <a href="schedule.html">Schedule</a>
+      <a href="liturgy.html">Liturgy</a>
+      <a href="documents.html">Documents</a>
+      
+      <!-- CÁC MỤC BỊ ẨN KHI Ở MÀN HÌNH TABLET/IPAD -->
+      <a href="info.html" class="hide-on-tablet">General Info</a>
+      <a href="participants.html" class="hide-on-tablet">Participants</a>
+      <a href="gallery.html" class="hide-on-tablet">Gallery</a>
+
+      <!-- MENU MORE DÀNH CHO TABLET (Nhấp để xổ xuống) -->
+      <div class="dropdown show-on-tablet" id="more-dropdown-container">
+        <a href="#" class="dropbtn" id="more-btn">More <i class="fas fa-chevron-down"></i></a>
+        <div class="dropdown-content">
+          <a href="info.html">General Info</a>
+          <a href="participants.html">Participants</a>
+          <a href="gallery.html">Gallery</a>
+        </div>
+      </div>
+    </div>
+
+    <button class="search-icon"><i class="fas fa-search"></i></button>
+  </header>
+
+  <!-- Khung chứa nội dung chính -->
+  <div class="main-content">
+    <div class="header-titles">
+      <div class="title-main">Strengthening Collaboration in Formation and Vocation Promotion</div>
+      <div class="title-sub">Towards Renewal of our Mission in Asia Pacific as Dominican Family</div>
+    </div>
+    
+    <div class="announcement-box">
+      <i class="fas fa-bullhorn"></i>
+      <div class="announcement-text" id="dynamic-announcement">
+        Welcome to the Asia Pacific Dominican Family Leadership Conference 2026.
+      </div>
+    </div>
+
+    <div class="nav-grid">
+      <a href="schedule.html" class="nav-card"><i class="fas fa-calendar-alt"></i><span>schedule</span></a>
+      <a href="documents.html" class="nav-card"><i class="fas fa-file-pdf"></i><span>Documents</span></a>
+      <a href="liturgy.html" class="nav-card"><i class="fas fa-church"></i><span>Liturgy</span></a>
+      <a href="info.html" class="nav-card"><i class="fas fa-info-circle"></i><span>General Info</span></a>
+      <a href="participants.html" class="nav-card"><i class="fas fa-users"></i><span>Participants</span></a>
+      <a href="gallery.html" class="nav-card"><i class="fas fa-images"></i><span>Gallery & Media</span></a>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-title">Asia Pacific Dominican Family Leadership Conference</div>
+    <div class="footer-subtitle">25-29 OCTOBER 2026 | VIETNAM</div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script>
+    // 1. Logic đóng/mở Sidebar (Menu điện thoại)
+    const menuBtn = document.getElementById('menu-btn');
+    const closeBtn = document.getElementById('close-btn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+
+    function toggleMenu() {
+      sidebar.classList.toggle('active');
+      overlay.classList.toggle('active');
+    }
+
+    if(menuBtn) menuBtn.addEventListener('click', toggleMenu);
+    if(closeBtn) closeBtn.addEventListener('click', toggleMenu);
+    if(overlay) overlay.addEventListener('click', toggleMenu);
+
+    // 2. Logic cho nút "More" xổ xuống trên Tablet
+    const moreBtn = document.getElementById('more-btn');
+    const moreDropdownContainer = document.getElementById('more-dropdown-container');
+
+    if (moreBtn && moreDropdownContainer) {
+      moreBtn.addEventListener('click', function(e) {
+        e.preventDefault(); // Ngăn trình duyệt load lại trang khi bấm link "#"
+        moreDropdownContainer.classList.toggle('active');
+      });
+
+      // Đóng dropdown khi bấm ra ngoài khoảng trống của trang
+      document.addEventListener('click', function(e) {
+        if (!moreDropdownContainer.contains(e.target)) {
+          moreDropdownContainer.classList.remove('active');
+        }
+      });
+    }
+
+    // 3. Logic Google Sheets API (Thông báo)
+    const announcementWebAppUrl = 'https://script.google.com/macros/s/AKfycbw_AXkC69ECBy1agz1Ak8nSo0a79cJxfrm82OJznsFPRDFEKUK0t6REQOhClgxDlxVrYg/exec'; 
+    if(announcementWebAppUrl) {
+        document.getElementById('dynamic-announcement').innerHTML = "Welcome to the Asia Pacific Dominican Family Leadership Conference 2026...";
+        fetch(announcementWebAppUrl)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('dynamic-announcement').innerHTML = data.text;
+        })
+        .catch(error => {
+            console.error('Lỗi khi tải thông báo', error);
+            document.getElementById('dynamic-announcement').innerHTML = "Welcome to the APDFLC 2026.";
+        });
+    }
+  </script>
+
+</body>
+</html>
