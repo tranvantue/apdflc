@@ -202,7 +202,7 @@
     </div>
     <div class="group">
       <button type="button" id="zoom-out" aria-label="Zoom out"><i class="fas fa-minus"></i></button>
-      <span class="zoom-label" id="zoom-label">125%</span>
+      <span class="zoom-label" id="zoom-label">–</span>
       <button type="button" id="zoom-in" aria-label="Zoom in"><i class="fas fa-plus"></i></button>
       <button type="button" id="zoom-fit">Fit width</button>
     </div>
@@ -255,7 +255,7 @@
       // ====== CÀI ĐẶT ======
       var PDF_URL = 'participants.pdf';   // File PDF đặt cùng thư mục với trang này
       var START_PAGE = 4;                 // Trang mở sẵn
-      var DEFAULT_ZOOM = 1.25;            // 125%
+      var DEFAULT_ZOOM = 'fit';           // 'fit' = vừa khít chiều rộng màn hình; hoặc số, ví dụ 1.25 = 125%
       var DRIVE_PREVIEW = 'https://drive.google.com/file/d/1Zqmer4JFTwLC4mS8sdouoAE_ap5QAeYj/preview';
       // =====================
 
@@ -349,9 +349,19 @@
         renderVisible();
       }
 
-      document.getElementById('zoom-in').addEventListener('click', function () { changeZoom(zoom + 0.25); });
-      document.getElementById('zoom-out').addEventListener('click', function () { changeZoom(zoom - 0.25); });
-      document.getElementById('zoom-fit').addEventListener('click', function () { changeZoom(fitWidthZoom()); });
+      var fitMode = (DEFAULT_ZOOM === 'fit');   // Đang ở chế độ vừa khít chiều rộng màn hình
+
+      document.getElementById('zoom-in').addEventListener('click', function () { fitMode = false; changeZoom(zoom + 0.25); });
+      document.getElementById('zoom-out').addEventListener('click', function () { fitMode = false; changeZoom(zoom - 0.25); });
+      document.getElementById('zoom-fit').addEventListener('click', function () { fitMode = true; changeZoom(fitWidthZoom()); });
+
+      // Khi thay đổi kích thước cửa sổ: giữ tài liệu vừa khít chiều rộng
+      var resizeTimer = null;
+      window.addEventListener('resize', function () {
+        if (!fitMode || !pages.length) return;
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () { changeZoom(fitWidthZoom()); }, 150);
+      });
 
       var ticking = false;
       viewer.addEventListener('scroll', function () {
@@ -382,14 +392,14 @@
           pages.push({ page: page, el: el, canvas: canvas, task: null, renderedZoom: null });
         });
         statusEl.remove();
-        // Màn hình hẹp (điện thoại): vừa khung; màn hình rộng: 125%
-        var fit = fitWidthZoom();
-        zoom = fit < DEFAULT_ZOOM ? fit : DEFAULT_ZOOM;
+        // Mặc định: vừa khít chiều rộng màn hình (máy tính lẫn điện thoại)
+        zoom = fitMode ? fitWidthZoom() : DEFAULT_ZOOM;
         layout();
         scrollToPage(START_PAGE - 1);
         pageNumEl.textContent = currentPageIndex() + 1;
         renderVisible();
-      }).catch(function () {
+      }).catch(function (err) {
+        console.warn('Không mở được ' + PDF_URL + ' trên website, chuyển sang bản xem Google Drive.', err);
         showDriveFallback();
       });
     })();
