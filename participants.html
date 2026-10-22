@@ -70,14 +70,63 @@
   .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); opacity: 0; visibility: hidden; transition: all 0.3s ease; z-index: 9999; }
   .overlay.active { opacity: 1; visibility: visible; }
 
-  /* ---------------- GIAO DIỆN KHUNG TÀI LIỆU (IFRAME) ---------------- */
+  /* ---------------- THANH CÔNG CỤ XEM PDF ---------------- */
+  .pdf-toolbar {
+    flex-shrink: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 16px;
+    padding: 8px 20px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    color: #2c3e50;
+    font-size: 14px;
+  }
+  .pdf-toolbar .group { display: flex; align-items: center; gap: 6px; }
+  .pdf-toolbar button {
+    min-width: 36px; height: 36px; padding: 0 10px;
+    border: 1px solid #d1d5db; border-radius: 6px;
+    background: #fff; color: #2c3e50; font-size: 14px; cursor: pointer;
+  }
+  .pdf-toolbar button:hover { background: #f3f4f6; }
+  .pdf-toolbar .zoom-label { min-width: 52px; text-align: center; font-variant-numeric: tabular-nums; }
+  .pdf-toolbar a { color: #2c3e50; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  .pdf-toolbar a:hover { color: #3498db; }
+
+  /* ---------------- KHUNG HIỂN THỊ TÀI LIỆU ---------------- */
   .doc-container {
     width: 100%;
     flex: 1; /* Tự động lấp đầy phần chiều cao còn lại dưới header */
     position: relative;
+    overflow: auto;
+    background-color: #e5e7eb;
+    -webkit-overflow-scrolling: touch;
+  }
+  #pdf-pages {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 100%;
+  }
+  .pdf-page {
+    position: relative;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .pdf-page canvas { display: block; width: 100%; height: 100%; }
+  #pdf-status {
+    position: absolute; top: 40%; left: 0; right: 0;
+    text-align: center; color: #555; font-size: 15px;
   }
 
-  iframe {
+  /* Dự phòng: nếu chưa có file PDF trên website thì nhúng bản xem của Google Drive */
+  .doc-container iframe {
     width: 100%;
     height: 100%;
     border: none;
@@ -146,10 +195,16 @@
     <button class="search-icon"><i class="fas fa-search"></i></button>
   </header>
 
+  <!-- Ghi chú: danh sách tham dự bắt đầu từ trang 4 của file PDF -->
+  <div class="doc-note">
+    <span><i class="fas fa-info-circle"></i> The list of participants begins on <strong>page 4</strong>. Please scroll down.</span>
+    <a href="https://drive.google.com/file/d/1Zqmer4JFTwLC4mS8sdouoAE_ap5QAeYj/view" target="_blank" rel="noopener">Open in Google Drive <i class="fas fa-external-link-alt"></i></a>
+  </div>
+
   <!-- Khung chứa nội dung Iframe -->
   <div class="doc-container">
-    <!-- Đường link đã được chuyển sang chế độ Preview (chỉ xem, không có thanh công cụ) -->
-    <iframe src="https://docs.google.com/document/d/1auXAuPUuPq0Bh3nZ0Mqvk7acEDY6GoJ1kiCL5-IHbUk/preview"></iframe>
+    <!-- File PDF trên Google Drive, chế độ Preview (chỉ xem) -->
+    <iframe src="https://drive.google.com/file/d/1Zqmer4JFTwLC4mS8sdouoAE_ap5QAeYj/preview" allow="autoplay" title="List of Participants"></iframe>
   </div>
 
   <!-- SCRIPT XỬ LÝ MENU -->
