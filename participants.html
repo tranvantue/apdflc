@@ -288,9 +288,15 @@
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
       function fitWidthZoom() {
+        // Tính theo trang rộng nhất (file có cả trang dọc lẫn trang ngang),
+        // để không trang nào bị tràn ra ngoài màn hình.
         var avail = viewer.clientWidth - 32;
-        var vp = pages[0].page.getViewport({ scale: CSS_UNITS });
-        return Math.max(0.25, avail / vp.width);
+        var widest = 0;
+        pages.forEach(function (p) {
+          var w = p.page.getViewport({ scale: CSS_UNITS }).width;
+          if (w > widest) widest = w;
+        });
+        return Math.max(0.25, avail / widest);
       }
 
       function setZoomLabel() { zoomLabel.textContent = Math.round(zoom * 100) + '%'; }
