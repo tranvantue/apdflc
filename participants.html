@@ -195,16 +195,24 @@
     <button class="search-icon"><i class="fas fa-search"></i></button>
   </header>
 
-  <!-- Ghi chú: danh sách tham dự bắt đầu từ trang 4 của file PDF -->
-  <div class="doc-note">
-    <span><i class="fas fa-info-circle"></i> The list of participants begins on <strong>page 4</strong>. Please scroll down.</span>
+  <!-- Thanh công cụ: số trang, zoom, mở trên Google Drive -->
+  <div class="pdf-toolbar">
+    <div class="group">
+      <span>Page <span id="page-num">–</span> / <span id="page-count">–</span></span>
+    </div>
+    <div class="group">
+      <button type="button" id="zoom-out" aria-label="Zoom out"><i class="fas fa-minus"></i></button>
+      <span class="zoom-label" id="zoom-label">125%</span>
+      <button type="button" id="zoom-in" aria-label="Zoom in"><i class="fas fa-plus"></i></button>
+      <button type="button" id="zoom-fit">Fit width</button>
+    </div>
     <a href="https://drive.google.com/file/d/1Zqmer4JFTwLC4mS8sdouoAE_ap5QAeYj/view" target="_blank" rel="noopener">Open in Google Drive <i class="fas fa-external-link-alt"></i></a>
   </div>
 
-  <!-- Khung chứa nội dung Iframe -->
-  <div class="doc-container">
-    <!-- File PDF trên Google Drive, chế độ Preview (chỉ xem) -->
-    <iframe src="https://drive.google.com/file/d/1Zqmer4JFTwLC4mS8sdouoAE_ap5QAeYj/preview" allow="autoplay" title="List of Participants"></iframe>
+  <!-- Khung hiển thị tài liệu: mở sẵn ở trang 4, zoom 125% -->
+  <div class="doc-container" id="pdf-viewer">
+    <div id="pdf-pages"></div>
+    <div id="pdf-status">Loading…</div>
   </div>
 
   <!-- SCRIPT XỬ LÝ MENU -->
@@ -238,6 +246,153 @@
         }
       });
     }
+  </script>
+
+  <!-- TRÌNH XEM PDF (PDF.js): mở ở trang 4, zoom 125% -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    (function () {
+      // ====== CÀI ĐẶT ======
+      var PDF_URL = 'participants.pdf';   // File PDF đặt cùng thư mục với trang này
+      var START_PAGE = 4;                 // Trang mở sẵn
+      var DEFAULT_ZOOM = 1.25;            // 125%
+      var DRIVE_PREVIEW = 'https://drive.google.com/file/d/1Zqmer4JFTwLC4mS8sdouoAE_ap5QAeYj/preview';
+      // =====================
+
+      var CSS_UNITS = 96 / 72;            // 100% = kích thước thật như trình xem PDF của trình duyệt
+      var viewer = document.getElementById('pdf-viewer');
+      var pagesBox = document.getElementById('pdf-pages');
+      var statusEl = document.getElementById('pdf-status');
+      var pageNumEl = document.getElementById('page-num');
+      var pageCountEl = document.getElementById('page-count');
+      var zoomLabel = document.getElementById('zoom-label');
+
+      var pdfDoc = null;
+      var pages = [];       // { page, el, canvas, task, renderedZoom }
+      var zoom = DEFAULT_ZOOM;
+      var observer = null;
+
+      function showDriveFallback() {
+        statusEl.remove();
+        pagesBox.remove();
+        var f = document.createElement('iframe');
+        f.src = DRIVE_PREVIEW;
+        f.title = 'List of Participants';
+        viewer.style.overflow = 'hidden';
+        viewer.appendChild(f);
+        document.querySelectorAll('.pdf-toolbar .group').forEach(function (g) { g.style.display = 'none'; });
+      }
+
+      if (!window.pdfjsLib) { showDriveFallback(); return; }
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+      function fitWidthZoom() {
+        var avail = viewer.clientWidth - 32;
+        var vp = pages[0].page.getViewport({ scale: CSS_UNITS });
+        return Math.max(0.25, avail / vp.width);
+      }
+
+      function setZoomLabel() { zoomLabel.textContent = Math.round(zoom * 100) + '%'; }
+
+      function layout() {
+        pages.forEach(function (p) {
+          var vp = p.page.getViewport({ scale: zoom * CSS_UNITS });
+          p.el.style.width = Math.floor(vp.width) + 'px';
+          p.el.style.height = Math.floor(vp.height) + 'px';
+        });
+        setZoomLabel();
+      }
+
+      function renderPage(p) {
+        if (p.renderedZoom === zoom) return;
+        if (p.task) { p.task.cancel(); p.task = null; }
+        var dpr = window.devicePixelRatio || 1;
+        var vp = p.page.getViewport({ scale: zoom * CSS_UNITS * dpr });
+        var canvas = p.canvas;
+        canvas.width = Math.floor(vp.width);
+        canvas.height = Math.floor(vp.height);
+        var z = zoom;
+        p.task = p.page.render({ canvasContext: canvas.getContext('2d'), canvas: canvas, viewport: vp });
+        p.task.promise.then(function () { p.renderedZoom = z; p.task = null; })
+          .catch(function () { /* bị huỷ khi đổi zoom */ });
+      }
+
+      function currentPageIndex() {
+        var y = viewer.scrollTop + viewer.clientHeight / 3;
+        var idx = 0;
+        for (var i = 0; i < pages.length; i++) {
+          if (pages[i].el.offsetTop <= y) idx = i; else break;
+        }
+        return idx;
+      }
+
+      function scrollToPage(i) {
+        var p = pages[Math.min(Math.max(i, 0), pages.length - 1)];
+        viewer.scrollTop = p.el.offsetTop - 16;
+      }
+
+      function renderVisible() {
+        var top = viewer.scrollTop - viewer.clientHeight;
+        var bottom = viewer.scrollTop + viewer.clientHeight * 2;
+        pages.forEach(function (p) {
+          var t = p.el.offsetTop, b = t + p.el.offsetHeight;
+          if (b >= top && t <= bottom) renderPage(p);
+        });
+      }
+
+      function changeZoom(newZoom) {
+        var idx = currentPageIndex();
+        zoom = Math.min(4, Math.max(0.25, Math.round(newZoom * 100) / 100));
+        layout();
+        scrollToPage(idx);
+        renderVisible();
+      }
+
+      document.getElementById('zoom-in').addEventListener('click', function () { changeZoom(zoom + 0.25); });
+      document.getElementById('zoom-out').addEventListener('click', function () { changeZoom(zoom - 0.25); });
+      document.getElementById('zoom-fit').addEventListener('click', function () { changeZoom(fitWidthZoom()); });
+
+      var ticking = false;
+      viewer.addEventListener('scroll', function () {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(function () {
+          ticking = false;
+          if (!pages.length) return;
+          pageNumEl.textContent = currentPageIndex() + 1;
+          renderVisible();
+        });
+      });
+
+      pdfjsLib.getDocument({ url: PDF_URL }).promise.then(function (doc) {
+        pdfDoc = doc;
+        pageCountEl.textContent = doc.numPages;
+        var jobs = [];
+        for (var n = 1; n <= doc.numPages; n++) jobs.push(doc.getPage(n));
+        return Promise.all(jobs);
+      }).then(function (list) {
+        list.forEach(function (page, i) {
+          var el = document.createElement('div');
+          el.className = 'pdf-page';
+          el.setAttribute('aria-label', 'Page ' + (i + 1));
+          var canvas = document.createElement('canvas');
+          el.appendChild(canvas);
+          pagesBox.appendChild(el);
+          pages.push({ page: page, el: el, canvas: canvas, task: null, renderedZoom: null });
+        });
+        statusEl.remove();
+        // Màn hình hẹp (điện thoại): vừa khung; màn hình rộng: 125%
+        var fit = fitWidthZoom();
+        zoom = fit < DEFAULT_ZOOM ? fit : DEFAULT_ZOOM;
+        layout();
+        scrollToPage(START_PAGE - 1);
+        pageNumEl.textContent = currentPageIndex() + 1;
+        renderVisible();
+      }).catch(function () {
+        showDriveFallback();
+      });
+    })();
   </script>
 
 </body>
