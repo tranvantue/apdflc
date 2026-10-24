@@ -405,13 +405,17 @@
   fetch(scriptUrl)
     .then(response => response.json())
     .then(data => {
-      
+      // Hàm hỗ trợ cắt bỏ phần đuôi file (từ dấu chấm cuối cùng)
+      const removeExtension = (filename) => {
+        return filename ? filename.replace(/\.[^/.]+$/, "") : "";
+      };
+
       // --- XỬ LÝ HÌNH ẢNH GALLERY ---
       if(data.images.length === 0) {
         galleryContainer.innerHTML = '<p class="loading-text" style="grid-column: 1 / -1;">No images found.</p>';
         scrollSentinel.style.display = 'none';
       } else {
-        imagesArray = data.images; 
+        imagesArray = data.images.map(item => ({ ...item, name: removeExtension(item.name) })); 
         loadMoreImages(); 
         setupScrollObserver(); 
       }
@@ -421,7 +425,7 @@
         btsContainer.innerHTML = '<p class="loading-text" style="grid-column: 1 / -1;">No BTS images found.</p>';
         scrollSentinelBts.style.display = 'none';
       } else if (data.btsImages) {
-        btsImagesArray = data.btsImages;
+        btsImagesArray = data.btsImages.map(item => ({ ...item, name: removeExtension(item.name) }));
         loadMoreBtsImages();
         setupBtsScrollObserver();
       } else {
@@ -438,6 +442,8 @@
       } else {
         videoLoading.style.display = 'none'; 
         data.videos.forEach(item => {
+          const cleanVideoName = removeExtension(item.name);
+          
           videoContainer.innerHTML += `
             <div class="video-item">
               <iframe 
@@ -448,7 +454,7 @@
                 allow="autoplay; encrypted-media" 
                 allowfullscreen>
               </iframe>
-              <div class="video-caption">${item.name}</div>
+              <div class="video-caption">${cleanVideoName}</div>
             </div>
           `;
         });
@@ -461,7 +467,6 @@
       document.getElementById('video-container').innerHTML = '<p class="loading-text">Failed to load videos.</p>';
       console.error(error);
     });
-
 
   function loadMoreImages() {
     const end = Math.min(loadedCount + itemsPerLoad, imagesArray.length);
