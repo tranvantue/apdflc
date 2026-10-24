@@ -1,0 +1,122 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload to Google Drive</title>
+    <style>
+        body { 
+            font-family: "Minion Pro", Arial, sans-serif; 
+            padding: 40px 20px; 
+            display: flex;
+            justify-content: center;
+        }
+        .container { 
+            width: 100%;
+            max-width: 450px; 
+            padding: 30px; 
+            border: 1px solid #dcdcdc; 
+            border-radius: 8px; 
+            background-color: #eaf5f6; /* Nền beige nhạt */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+            text-align: center;
+        }
+        input[type="file"] {
+            width: 100%;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #fff;
+            border: 1px dashed #aaa;
+            border-radius: 4px;
+        }
+        button { 
+            width: 100%;
+            padding: 12px 15px; 
+            cursor: pointer; 
+            background-color: #4a5568;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #2d3748; }
+        #status { 
+            margin-top: 20px; 
+            text-align: center;
+            font-weight: bold; 
+            color: #2c5282; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Tải Tệp Lên Drive</h2>
+        <input type="file" id="uploadFile" />
+        <button onclick="uploadToDrive()">Bắt đầu tải lên</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function uploadToDrive() {
+            const fileInput = document.getElementById('uploadFile');
+            const statusDiv = document.getElementById('status');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                statusDiv.innerText = "Vui lòng chọn một tệp!";
+                return;
+            }
+
+            statusDiv.innerText = "Đang xử lý dữ liệu...";
+            
+            // Dùng FileReader để chuyển file thành chuỗi Base64
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const base64Data = e.target.result;
+
+                const payload = {
+                    fileName: file.name,
+                    mimeType: file.type,
+                    data: base64Data
+                };
+
+                statusDiv.innerText = "Đang tải lên Google Drive...";
+
+                // ⚠️ QUAN TRỌNG: Dán Web App URL của bạn vào đây
+                const webAppUrl = "https://script.google.com/macros/s/AKfycbzbmlwsxewAeOGTusjrp6oPcaYk4W1epz_PlGL0CFsTIOXUA_STAuoQWQTtim5Vlm6t/exec";
+
+                fetch(webAppUrl, {
+                    method: 'POST',
+                    // Sử dụng text/plain để tránh trình duyệt kích hoạt kiểm tra CORS preflight (OPTIONS)
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8' 
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === "success") {
+                        statusDiv.innerHTML = `✅ Tải lên thành công! <br><br> <a href="${data.url}" target="_blank">Nhấn vào đây để xem tệp</a>`;
+                        fileInput.value = ""; // Xóa form sau khi upload xong
+                    } else {
+                        statusDiv.innerText = "Lỗi từ máy chủ: " + data.message;
+                    }
+                })
+                .catch(error => {
+                    statusDiv.innerText = "Có lỗi xảy ra trong quá trình tải lên. Vui lòng kiểm tra lại kết nối mạng.";
+                    console.error(error);
+                });
+            };
+
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
