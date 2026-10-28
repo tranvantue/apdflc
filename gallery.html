@@ -160,6 +160,18 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
   .photo-item:hover .photo-caption { opacity: 1; }
 
+  /* Tiêu đề nhóm theo ngày */
+  .date-heading {
+    grid-column: 1 / -1;
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 10px 0 0;
+    padding: 4px 0 4px 12px;
+    border-left: 4px solid #3498db;
+  }
+  .date-heading:first-child { margin-top: 0; }
+
   /* Con lăn tải trang (Sentinel) */
   .scroll-loader {
     text-align: center;
@@ -412,6 +424,102 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   scrollSentinel.style.display = 'block'; 
   scrollSentinelBts.style.display = 'block';
 
+  /* --- SẮP XẾP & NHÓM THEO NGÀY TRONG TÊN FILE --- */
+  // 'asc'  = ngày cũ → mới
+  // 'desc' = ngày mới → cũ
+  const SORT_ORDER = 'desc';
+
+  // Khi tên file chỉ có "Day 26" (không có tháng/năm) thì dùng tháng/năm mặc định này
+  const DEFAULT_YEAR = 2026;
+  const DEFAULT_MONTH = 10; // 10 = tháng Mười (October)
+
+  const MONTH_NAMES = {
+    jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+    jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12
+  };
+  const MONTH_RE = '(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?![a-z])';
+
+  // Đọc ngày từ tên file, trả về "YYYY-MM-DD" hoặc null nếu không có.
+  // Hỗ trợ: 20261028 / 2026-10-28 / 2026_10_28 / 2026.10.28
+  //         28-10-2026 / 28_10_2026 / 28.10.2026 / 28102026
+  // (ví dụ: IMG_20261028_101530.jpg, PXL_20261028_...jpg, 28-10-2026 Mass 01.jpg)
+  function getDateKey(filename) {
+    const s = filename || '';
+    let y, m, d, match;
+
+    // Dạng năm đứng trước: YYYY-MM-DD
+    match = s.match(/(?:^|\D)((?:19|20)\d{2})[-_.]?(0[1-9]|1[0-2])[-_.]?(0[1-9]|[12]\d|3[01])(?!\d)/);
+    if (match) {
+      y = match[1]; m = match[2]; d = match[3];
+    } else {
+      // Dạng ngày đứng trước: DD-MM-YYYY
+      match = s.match(/(?:^|\D)(0[1-9]|[12]\d|3[01])[-_.]?(0[1-9]|1[0-2])[-_.]?((?:19|20)\d{2})(?!\d)/);
+      if (match) { d = match[1]; m = match[2]; y = match[3]; }
+    }
+    // Dạng chữ: "26 Oct", "26th October", "Oct 26"
+    if (!y) {
+      let mm;
+      match = s.match(new RegExp('(?:^|\\D)(\\d{1,2})(?:st|nd|rd|th)?[\\s\\-_.,]*' + MONTH_RE, 'i'));
+      if (match) {
+        d = match[1]; mm = MONTH_NAMES[match[2].slice(0, 3).toLowerCase()];
+      } else {
+        match = s.match(new RegExp('(?:^|[^a-z])' + MONTH_RE + '[\\s\\-_.,]*(\\d{1,2})(?!\\d)', 'i'));
+        if (match) { mm = MONTH_NAMES[match[1].slice(0, 3).toLowerCase()]; d = match[2]; }
+      }
+      if (mm) {
+        const yearMatch = s.match(/(?:^|\D)((?:19|20)\d{2})(?!\d)/);
+        y = yearMatch ? yearMatch[1] : String(DEFAULT_YEAR);
+        m = String(mm);
+      }
+    }
+
+    // Dạng "Day 26" -> ngày 26 của tháng/năm mặc định
+    if (!y) {
+      match = s.match(/(?:^|[^a-z])day[\s\-_.]*(\d{1,2})(?!\d)/i);
+      if (match) { d = match[1]; m = String(DEFAULT_MONTH); y = String(DEFAULT_YEAR); }
+    }
+
+    if (!y) return null;
+    m = String(m).padStart(2, '0');
+    d = String(d).padStart(2, '0');
+
+    // Kiểm tra ngày hợp lệ (ví dụ loại bỏ 31/02)
+    const dt = new Date(+y, +m - 1, +d);
+    if (dt.getFullYear() !== +y || dt.getMonth() !== +m - 1 || dt.getDate() !== +d) return null;
+    return `${y}-${m}-${d}`;
+  }
+
+  // Sắp xếp theo ngày; cùng ngày thì theo tên file (thường chứa giờ chụp).
+  // Ảnh không có ngày được đưa xuống cuối.
+  function sortByDate(items) {
+    return items.sort((a, b) => {
+      if (a.dateKey && b.dateKey) {
+        if (a.dateKey !== b.dateKey) {
+          return SORT_ORDER === 'asc'
+            ? a.dateKey.localeCompare(b.dateKey)
+            : b.dateKey.localeCompare(a.dateKey);
+        }
+      } else if (a.dateKey) {
+        return -1;
+      } else if (b.dateKey) {
+        return 1;
+      }
+      return a.name.localeCompare(b.name, undefined, { numeric: true });
+    });
+  }
+
+  function formatDateHeading(dateKey) {
+    if (!dateKey) return 'Other Photos';
+    const [y, m, d] = dateKey.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+
+  // Ghi nhớ ngày của ảnh cuối cùng đã hiển thị (để biết khi nào cần chèn tiêu đề ngày mới)
+  let lastGalleryDate; // undefined = chưa có ảnh nào
+  let lastBtsDate;
+
   fetch(scriptUrl)
     .then(response => response.json())
     .then(data => {
@@ -425,7 +533,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         galleryContainer.innerHTML = '<p class="loading-text" style="grid-column: 1 / -1;">No images found.</p>';
         scrollSentinel.style.display = 'none';
       } else {
-        imagesArray = data.images.map(item => ({ ...item, name: removeExtension(item.name) })); 
+        imagesArray = sortByDate(data.images.map(item => ({ ...item, dateKey: getDateKey(item.name), name: removeExtension(item.name) })));
         loadMoreImages(); 
         setupScrollObserver(); 
       }
@@ -435,7 +543,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         btsContainer.innerHTML = '<p class="loading-text" style="grid-column: 1 / -1;">No BTS images found.</p>';
         scrollSentinelBts.style.display = 'none';
       } else if (data.btsImages) {
-        btsImagesArray = data.btsImages.map(item => ({ ...item, name: removeExtension(item.name) }));
+        btsImagesArray = sortByDate(data.btsImages.map(item => ({ ...item, dateKey: getDateKey(item.name), name: removeExtension(item.name) })));
         loadMoreBtsImages();
         setupBtsScrollObserver();
       } else {
@@ -484,6 +592,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     for (let i = loadedCount; i < end; i++) {
       const item = imagesArray[i];
+      if (item.dateKey !== lastGalleryDate) {
+        htmlChunk += `<div class="date-heading">${formatDateHeading(item.dateKey)}</div>`;
+        lastGalleryDate = item.dateKey;
+      }
       htmlChunk += `
         <div class="photo-item" onclick="openModal(${i}, false)">
           <img src="https://drive.google.com/thumbnail?id=${item.id}&sz=w250" alt="${item.name}" loading="lazy">
@@ -511,6 +623,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
     for (let i = btsLoadedCount; i < end; i++) {
       const item = btsImagesArray[i];
+      if (item.dateKey !== lastBtsDate) {
+        htmlChunk += `<div class="date-heading">${formatDateHeading(item.dateKey)}</div>`;
+        lastBtsDate = item.dateKey;
+      }
       htmlChunk += `
         <div class="photo-item" onclick="openModal(${i}, true)">
           <img src="https://drive.google.com/thumbnail?id=${item.id}&sz=w250" alt="${item.name}" loading="lazy">
